@@ -1,7 +1,6 @@
 import {dom} from "./dom.js";
-import {chosenRace} from "./main_win.js";
+import {state} from "./store.js";
 import {slotContent} from "./equip_items.js";
-import {selectedBlessings} from "./boons.js";
 import {selectedPerks} from "./skills.js"
 import {cachedItems} from "./items_menu.js";
 const unarmedBaseDam = {
@@ -35,10 +34,10 @@ const enchUnarmArms = {
 	"Brawler's Daedric Gauntlets": 18,
 };
 function displayUnarmedDamage() {
-	let totalUnarmedDam = unarmedBaseDam[chosenRace];
+	let totalUnarmedDam = unarmedBaseDam[state.character.race];
 	const armguards = slotContent.Arms?.name;
 	if (armguards) {
-		if (selectedPerks.get("Heavy Armor").has("Fists of Steel")) {
+		if (selectedPerks["Heavy Armor"].includes("Fists of Steel")) {
 			const areHeavy = cachedItems["Armor"]["Heavy"][armguards];
 			if (areHeavy) {
 				totalUnarmedDam += areHeavy.armorRating;
@@ -49,7 +48,7 @@ function displayUnarmedDamage() {
 		if (armguards === "Fists of Randagulf") totalUnarmedDam *= 1.2;
 		if (armguards === "Imperial Dragon Gauntlets") totalUnarmedDam *= 1.1;
 	}
-	if (selectedBlessings.has("Seeker of Might")) totalUnarmedDam *= 1.1;
+	if (state.boons.selectedBlessings.includes("Seeker of Might")) totalUnarmedDam *= 1.1;
 	totalUnarmedDam = Math.round(totalUnarmedDam);
 	dom.unarmedDamageDom.textContent = totalUnarmedDam;
 }

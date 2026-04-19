@@ -1,17 +1,18 @@
 import {dom} from "./dom.js";
-import {currentSkillTree, charSkills} from "./skills.js";
-const skills = new Map();
-const perks = new Map();
+import {charSkills} from "./skills.js";
+import {state} from "./store.js";
+const skills = {};
+const perks = {};
 function updateTextPerk(clickedPerk, perk) {
-	perks.get(currentSkillTree).get(clickedPerk).textContent = clickedPerk + " " + perk.rankNow + "/" + perk.maxRank;
+	perks[state.skills.currentSkillTree][clickedPerk].textContent = clickedPerk + " " + perk.rankNow + "/" + perk.maxRank;
 }
 function addPerkSection() {
 	const node = dom.template.content.cloneNode(true);
 	const section = node.querySelector("section");
 	const h3 = node.querySelector("h3");
-	h3.textContent = currentSkillTree;
+	h3.textContent = state.skills.currentSkillTree;
 	dom.characterSkills.appendChild(node);
-	skills.set(currentSkillTree, section);
+	skills[state.skills.currentSkillTree] = section;
 }
 function returnLi(clickedPerk, perk) {
 	const li = document.createElement("li");
@@ -20,26 +21,29 @@ function returnLi(clickedPerk, perk) {
 	return li;
 }
 function addLiPerks(clickedPerk, li) {
-	if (!perks.get(currentSkillTree)) {
-		perks.set(currentSkillTree, new Map().set(clickedPerk, li));
-	} else {
-		perks.get(currentSkillTree).set(clickedPerk, li);
+	if (!perks[state.skills.currentSkillTree]) {
+		perks[state.skills.currentSkillTree] = {};
 	}
+	perks[state.skills.currentSkillTree][clickedPerk] = li;
 }
 function updateTextSkill(tree) {
-	tree = tree ?? currentSkillTree;
-	if (!skills.get(tree)) return;
-	skills.get(tree).querySelector("h3").textContent = tree + " " + charSkills[tree].total;
+	tree = tree ?? state.skills.currentSkillTree;
+	if (!skills[tree]) return;
+	skills[tree].querySelector("h3").textContent = tree + " " + charSkills[tree].total;
 }
 function deleteLiPerks(clickedPerk, skillTree) {
-	const tree = perks.get(skillTree);
-	tree.get(clickedPerk).remove();
-	tree.delete(clickedPerk);
+	const tree = perks[skillTree];
+	if (tree && tree[clickedPerk]) {
+		tree[clickedPerk].remove();
+		delete tree[clickedPerk];
+	}
 }
 function deletePerkSection(skillTree) {
-	if (perks.get(skillTree).size === 0) {
-		skills.get(skillTree).remove();
-		skills.delete(skillTree);
+	if (perks[skillTree] && Object.keys(perks[skillTree]).length === 0) {
+		if (skills[skillTree]) {
+			skills[skillTree].remove();
+			delete skills[skillTree];
+		}
 	}
 }
 export {skills, addPerkSection, returnLi, addLiPerks, updateTextSkill, deleteLiPerks, deletePerkSection, updateTextPerk};

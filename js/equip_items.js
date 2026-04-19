@@ -8,6 +8,7 @@ import {displayUnarmedDamage} from "./unarmed_damage.js";
 import {setPhysStats} from "./calc_items_values.js";
 import {addBonusForSameTypeArmor, cancelBonusForSameTypeArmor} from "./same_type.js";
 import {checkMatchingSetArmor} from "./same_set.js";
+import {state, updateState} from "./store.js";
 if (isDesktop) {
 	dom.showcaseSlotWrapper.addEventListener("mouseover", e => {
 		const slot = e.target.closest(".occupied");
@@ -86,15 +87,14 @@ const slotContent = {
 	Finger: null,
 	Legs: null,
 };
-const resolution = new Map();
-const cachedImages = new Map();
-const cardsWithDescr = new Map();
-let itemsEquipped = 0;
+const resolution = {};
+const cachedImages = {};
+const cardsWithDescr = {};
 async function equipItem(e) {
 	const name = e.dataset.itemName;
 	const item = cachedItems[properties.category][properties.type][name];
 	const promise = new Promise((resolve, reject) => {
-		resolution.set("First", {resolve, reject});
+		resolution["First"] = {resolve, reject};
 	});
 	const param = distributor(item);
 	slotChecker(param, name, item);
@@ -104,7 +104,7 @@ async function equipItem(e) {
 	} catch (err) {
 		console.log(err);
 	}
-	resolution.clear();
+	for (const key of Object.keys(resolution)) delete resolution[key];
 }
 function distributor(item) {
 	if (item.hands !== undefined) {
@@ -124,23 +124,23 @@ async function slotChecker(param, name, item) {
 		openEquipOptionsContainer();
 		openSelectHandWindow(name);
 		const hand = await new Promise((resolve, reject) => {
-			resolution.set("Second", {resolve, reject});
+			resolution["Second"] = {resolve, reject};
 		});
 		if (!slotContent[hand] && !slotContent.Both) {
 			closeSelectHandWindow();
 			closeEquipOptionsContainer();
-			resolution.get("First").resolve(hand);
+			resolution["First"].resolve(hand);
 		} else {
 			if (name === slotContent[hand]?.name) {
 				const promise = new Promise((resolve, reject) => {
-					resolution.set("Second", {resolve, reject});
+					resolution["Second"] = {resolve, reject};
 				});
 				try {
 					closeSelectHandWindow();
 					toggleSameItemWindow();
 					const result = await promise;
 				} catch (err) {
-					resolution.get("First").reject(err);
+					resolution["First"].reject(err);
 				}
 				closeEquipOptionsContainer();
 			} else if (slotContent.Both) {
@@ -153,7 +153,7 @@ async function slotChecker(param, name, item) {
 		}
 	} else if (param === "Two") {
 		if (!slotContent.Left && !slotContent.Right && !slotContent.Both) {
-			resolution.get("First").resolve("Both");
+			resolution["First"].resolve("Both");
 		} else {
 			openEquipOptionsContainer();
 			replacer(name, "Both", "Both", false);
@@ -166,16 +166,16 @@ async function slotChecker(param, name, item) {
 			openEquipOptionsContainer();
 			replacer(name, "Left", "Left", false);
 		} else {
-			resolution.get("First").resolve("Left");
+			resolution["First"].resolve("Left");
 		}
 	} else {
 		if (param === "Head") {
 			if (!slotContent.Head) {
 				if (!slotContent.Body) {
-					resolution.get("First").resolve(param);
+					resolution["First"].resolve(param);
 				} else {
 					if (!slotContent.Body.cannotWearHelmet) {
-						resolution.get("First").resolve(param);
+						resolution["First"].resolve(param);
 					} else {
 						openEquipOptionsContainer();
 						replacer(name, param, "Body", true);
@@ -189,10 +189,10 @@ async function slotChecker(param, name, item) {
 			const isHooded = item.cannotWearHelmet || false;
 			if (!slotContent.Body) {
 				if (!slotContent.Head) {
-					resolution.get("First").resolve(param);
+					resolution["First"].resolve(param);
 				} else {
 					if (!isHooded) {
-						resolution.get("First").resolve(param);
+						resolution["First"].resolve(param);
 					} else {
 						openEquipOptionsContainer();
 						replacer(name, param, "Head", true);
@@ -213,25 +213,25 @@ async function slotChecker(param, name, item) {
 				openEquipOptionsContainer();
 				replacer(name, param, param, false);
 			} else {
-				resolution.get("First").resolve(param);
+				resolution["First"].resolve(param);
 			}
 		}
 	}
 }
 async function replacer(name, firstSlot, secondSlot, isHooded) {
 	const promise = new Promise((resolve, reject) => {
-		resolution.set("Second", {resolve, reject});
+		resolution["Second"] = {resolve, reject};
 	});
 	openReplaceItemWindow(secondSlot, name, isHooded)
 	const replaceOrKeep = await new Promise((resolve, reject) => {
-		resolution.set("Third", {resolve, reject});
+		resolution["Third"] = {resolve, reject};
 	});
 	try {
 		decideToReplaceItem(replaceOrKeep, secondSlot, isHooded);
 		const result = await promise;
-		resolution.get("First").resolve(firstSlot);
+		resolution["First"].resolve(firstSlot);
 	} catch (err) {
-		resolution.get("First").reject(err);
+		resolution["First"].reject(err);
 	}
 	closeReplaceItemWindow()
 	closeEquipOptionsContainer();
@@ -259,9 +259,9 @@ function decideToReplaceItem(decision, slotName, isHooded) {
 		} else {
 			unequipItem(slotName);
 		}
-		resolution.get("Second").resolve("Item replaced");
+		resolution["Second"].resolve("Item replaced");
 	} else {
-		resolution.get("Second").reject("Item kept");
+		resolution["Second"].reject("Item kept");
 	}
 }
 function unequipItem(slotName, hideSlot = false, menuIsOpen) {
@@ -282,7 +282,7 @@ function unequipItem(slotName, hideSlot = false, menuIsOpen) {
 		adjustSlot(slotName, false);
 	}
 	countEquippedItems(false);
-	if (itemsEquipped === 0) toggleTitle(".info-win__item-info-section");
+	if (state.equipment.itemsEquipped === 0) toggleTitle(".info-win__item-info-section");
 	deleteCardsWithDescr(item, slotName);
 	setMagicResistances(item.name, -1);
 	cancelBonusForSameTypeArmor(slotName);
@@ -326,7 +326,7 @@ function bundleFunc(result, item, name) {
 	makeImg(result, item, name);
 	setSlotContent(result, item);
 	adjustSlot(result, true);
-	if (itemsEquipped === 0) toggleTitle(".info-win__item-info-section");
+	if (state.equipment.itemsEquipped === 0) toggleTitle(".info-win__item-info-section");
 	equipAetherialCrown(name);
 	makeCardsWithDescr(item, name, result);
 	countEquippedItems(true);
@@ -357,7 +357,7 @@ function equipItemInItemWindowSlot(item, slotName) {
 	if (slot.isOpen) slot.details.style.maxHeight = slot.details.scrollHeight + "px";
 }
 function makeImg(slotName, item, name) {
-	if (!cachedImages.has(name)) {
+	if (!cachedImages[name]) {
 		const img = document.createElement("img");
 		img.src = item.pathM;
 		img.alt = name;
@@ -385,7 +385,7 @@ function makeImg(slotName, item, name) {
 			}
 		}
 		img.style.display = "block";
-		cachedImages.set(name, img);
+		cachedImages[name] = img;
 		if (slotName === "Both") {
 			[slot.Left, slot.Right].forEach(s => s.appendChild(img.cloneNode(true)));
 		} else {
@@ -393,9 +393,9 @@ function makeImg(slotName, item, name) {
 		}
 	} else {
 		if (slotName === "Both") {
-			[slot.Left, slot.Right].forEach(s => s.appendChild(cachedImages.get(name).cloneNode(true)));
+			[slot.Left, slot.Right].forEach(s => s.appendChild(cachedImages[name].cloneNode(true)));
 		} else {
-			slot[slotName].appendChild(cachedImages.get(name).cloneNode(true));
+			slot[slotName].appendChild(cachedImages[name].cloneNode(true));
 		}
 	}
 }
@@ -415,7 +415,7 @@ function adjustSlot(slotName, bool) {
 	}
 }
 function countEquippedItems(x) {
-	x ? itemsEquipped++ : itemsEquipped--;
+	updateState(s => { x ? s.equipment.itemsEquipped++ : s.equipment.itemsEquipped--; });
 }
 function toggleEquippedCardsPanel() {
 	dom.equippedCards.classList.toggle("showEquipped");
@@ -427,10 +427,10 @@ function closeInventory() {
 	dom.menuInventoryButton.classList.remove("inventory-active");
 }
 function chooseHand(e) {
-	resolution.get("Second").resolve(e.textContent);
+	resolution["Second"].resolve(e.textContent);
 }
 function replaceOrKeepItem(e) {
-	resolution.get("Third")?.resolve(e.textContent);
+	resolution["Third"]?.resolve(e.textContent);
 }
 function openEquipOptionsContainer() {
 	dom.chooseHandContainer.classList.remove("hidden");
@@ -451,7 +451,7 @@ function toggleSameItemWindow() {
 	dom.sameItem.classList.toggle("hidden");
 }
 function confirmSameItem() {
-	resolution.get("Second").reject("Same item");
+	resolution["Second"].reject("Same item");
 	toggleSameItemWindow();
 }
 function toggleItemDetails(e) {
@@ -546,9 +546,9 @@ function toggleUnequipFromMainWindow() {
 async function unequipConditions(slotName, nameField, menuIsOpen) {
 	const defSlot = (slotName === "Left" || slotName === "Right") && slotContent.Both ? "Both" : slotName;
 	nameField.textContent = slotContent[defSlot].name;
-	const decision = await new Promise(resolve => resolution.set("Third", {resolve}));
+	const decision = await new Promise(resolve => resolution["Third"] = {resolve});
 	if (decision === "Yes") unequipItem(defSlot, true, menuIsOpen);
-	resolution.clear();
+	for (const key of Object.keys(resolution)) delete resolution[key];
 }
 function makeCardsWithDescr(item, name, result) {
 	const node = dom.card.content.cloneNode(true);
@@ -590,13 +590,13 @@ function makeCardsWithDescr(item, name, result) {
 	const key = `${name} ${result}`;
 	article.dataset.lightSlot = result;
 	dom.placeForCards.appendChild(article);
-	cardsWithDescr.set(key, article);
+	cardsWithDescr[key] = article;
 	addLightData(key, result);
 }
 function deleteCardsWithDescr(item, slotName) {
 	const itemName = `${item.name} ${slotName}`;
-	cardsWithDescr.get(itemName).remove();
-	cardsWithDescr.delete(itemName);
+	cardsWithDescr[itemName].remove();
+	delete cardsWithDescr[itemName];
 	clearLightData(slotName);
 }
 function addLightData(name, result) {
@@ -629,7 +629,7 @@ function highlightSlot(e) {
 }
 function highlightCard(e) {
 	const name = e.target.closest(".showcase__slot")?.dataset?.lightCard;
-	name && cardsWithDescr.get(name).classList.toggle("item-info--highlight");
+	name && cardsWithDescr[name].classList.toggle("item-info--highlight");
 }
 function modalToCenter() {
 	const a = dom.unequipMiniatureContainer, b = dom.unequipMiniatureModal, c = document.documentElement;

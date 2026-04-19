@@ -2,12 +2,12 @@ import {Items} from "./items_constructor.js";
 import {dom} from "./dom.js";
 import {observer} from "./lazy_loading.js";
 import {toggleMenu} from "./main_win.js";
+import {state, updateState} from "./store.js";
 import {clearSearch} from "./find_item.js";
 import {closeAllItemsDetails, closeInventory} from "./equip_items.js";
 const cachedItems = {};
 const checkedFilterOptions = [];
 const webpURL = "https://vzhhub.github.io/SCB-webp/imagesWebP/";
-let itemsOpen = false;
 const properties = {
 	category: undefined,
 	type: undefined,
@@ -68,7 +68,7 @@ function oneTimeFunction (event) {
 	Items.makeItem(category, type);
 	makeCards();
 	toggleMenu();
-	itemsOpen = !itemsOpen;
+	updateState(s => { s.ui.itemsOpen = !s.ui.itemsOpen; });
 	event.target.addEventListener("click", openResults);
 }
 function openCategory(button) {
@@ -162,7 +162,7 @@ function openResults() {
 	showThisTypeItems();
 	nameSortButtons();
 	toggleMenu();
-	itemsOpen = !itemsOpen;
+	updateState(s => { s.ui.itemsOpen = !s.ui.itemsOpen; });
 }
 function toDefaultSortingOrder() {
 	const fragment = document.createDocumentFragment();
@@ -200,7 +200,7 @@ function hideItems() {
 	hideFilterCategories();
 	uncheckAllCheckboxes();
 	clearSearch(true);
-	itemsOpen = !itemsOpen;
+	updateState(s => { s.ui.itemsOpen = !s.ui.itemsOpen; });
 }
 function showThisTypeItems() {
 	Object.values(cachedItems[properties.category][properties.type]).forEach(e => {
@@ -335,4 +335,4 @@ function showChosenFilterOptions() {
 	}
 	dom.cardsList.scrollTop = 0;
 }
-export {itemsOpen, menuToDefaultView, cachedItems, hideItems, properties};
+export {menuToDefaultView, cachedItems, hideItems, properties};

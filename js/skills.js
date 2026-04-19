@@ -1,7 +1,8 @@
 import {isDesktop, raceSkills} from "./other.js";
 import {dom} from "./dom.js";
 import {menuToDefaultView} from "./items_menu.js";
-import {toggleMenu, chosenRace} from "./main_win.js";
+import {toggleMenu} from "./main_win.js";
+import {state, updateState} from "./store.js";
 import {toggleTitle} from "./info_tabs.js";
 import {setMagicResistances} from "./magic_resistances.js";
 import {displayUnarmedDamage} from "./unarmed_damage.js";
@@ -159,27 +160,26 @@ const maxPerksByTree = {
 	Speech: 13,
 	Alchemy: 15,
 };
-const startingPerks = new Map([
-	["Illusion", "Novice Illusion"],
-	["Conjuration", "Novice Conjuration"],
-	["Destruction", "Novice Destruction"],
-	["Restoration", "Novice Restoration"],
-	["Alteration", "Novice Alteration"],
-	["Enchanting", "Enchanter"],
-	["Smithing", "Steel Smithing"],
-	["Heavy Armor", "Juggernaut"],
-	["Block", "Shield Wall"],
-	["Block", "Shield Wall"],
-	["Two-Handed", "Barbarian"],
-	["One-Handed", "Armsman"],
-	["Archery", "Overdraw"],
-	["Light Armor", "Agile Defender"],
-	["Sneak", "Stealth"],
-	["Lockpicking", "Novice Locks"],
-	["Pickpocket", "Light Fingers"],
-	["Speech", "Haggling"],
-	["Alchemy", "Alchemist"]
-]);
+const startingPerks = {
+	"Illusion": "Novice Illusion",
+	"Conjuration": "Novice Conjuration",
+	"Destruction": "Novice Destruction",
+	"Restoration": "Novice Restoration",
+	"Alteration": "Novice Alteration",
+	"Enchanting": "Enchanter",
+	"Smithing": "Steel Smithing",
+	"Heavy Armor": "Juggernaut",
+	"Block": "Shield Wall",
+	"Two-Handed": "Barbarian",
+	"One-Handed": "Armsman",
+	"Archery": "Overdraw",
+	"Light Armor": "Agile Defender",
+	"Sneak": "Stealth",
+	"Lockpicking": "Novice Locks",
+	"Pickpocket": "Light Fingers",
+	"Speech": "Haggling",
+	"Alchemy": "Alchemist"
+};
 const perksOverall = {
 	Alteration: {
 		maxPerks: 14,
@@ -1370,62 +1370,62 @@ const perksOverall = {
 };
 const lineClass = "skill-lines__line--selected";
 const perkClass = "skill-perks__perk--selected";
-const lineNodes = new Map();
-const perkNodes = new Map();
-const selectedPerks = new Map();
-const selectedLines = new Set();
-const parentPerks = new Map();
-const childrenPerks = new Map();
-const svgSkillTrees = new Map();
-const skillIconsButtons = new Map();
-const iconNames = new Map();
-const skillIconsPerksNumber = new Map();
-const currentPerkRank = new Map();
-let currentSkillTree = "Illusion";
+const lineNodes = {};
+const perkNodes = {};
+const selectedPerks = {};
+const selectedLines = [];
+const parentPerks = {};
+const childrenPerks = {};
+const svgSkillTrees = {};
+const skillIconsButtons = {};
+const iconNames = {};
+const skillIconsPerksNumber = {};
+const currentPerkRank = {};
+
 let currentSkillIcon = "Illusion";
-let sumOfChosenPerks = 0;
+
 (() => {
 	function getArray(map, key) {
-		let arr = map.get(key);
+		let arr = map[key];
 		if (!arr) {
 			arr = [];
-			map.set(key, arr);
+			map[key] = arr;
 		}
 		return arr;
 	}
 	for (const i of dom.svgSkillLines) {
 		const lineName = i.dataset.to + " " + i.dataset.from;
-		lineNodes.set(lineName, i);
+		lineNodes[lineName] = i;
 	}
 	for (const i of dom.svgSkillTrees) {
-		const pp = new Map(), cp = new Map(), map = new Map();
+		const pp = {}, cp = {}, map = {};
 		for (const j of i.querySelectorAll(".skill-lines__line")) {
 			const {to, from} = j.dataset;
 			getArray(pp, from).push(to);
 			getArray(cp, to).push(from);
 		}
-		for (const j of i.querySelectorAll(".skill-perks__perk")) map.set(j.dataset.perkName, j);
+		for (const j of i.querySelectorAll(".skill-perks__perk")) map[j.dataset.perkName] = j;
 		const skillTree = i.dataset.skillTree;
-		perkNodes.set(skillTree, map);
-		svgSkillTrees.set(skillTree, i);
-		parentPerks.set(skillTree, pp);
-		childrenPerks.set(skillTree, cp);
-		selectedPerks.set(skillTree, new Set());
+		perkNodes[skillTree] = map;
+		svgSkillTrees[skillTree] = i;
+		parentPerks[skillTree] = pp;
+		childrenPerks[skillTree] = cp;
+		selectedPerks[skillTree] = [];
 	}
-	for (const i of dom.skillIcons) skillIconsButtons.set(i.dataset.skillIcon, i);
-	for (const i of dom.iconNames) iconNames.set(i.dataset.iconName, i);
-	for (const i of dom.skillIconsPerksNumber) skillIconsPerksNumber.set(i.dataset.chosenPerks, i);
-	for (const i of dom.currentPerkRank) currentPerkRank.set(i.dataset.perkRank, i);
+	for (const i of dom.skillIcons) skillIconsButtons[i.dataset.skillIcon] = i;
+	for (const i of dom.iconNames) iconNames[i.dataset.iconName] = i;
+	for (const i of dom.skillIconsPerksNumber) skillIconsPerksNumber[i.dataset.chosenPerks] = i;
+	for (const i of dom.currentPerkRank) currentPerkRank[i.dataset.perkRank] = i;
 })();
 dom.skillsButton.addEventListener("click", () => {
-	currentSkillTree = currentSkillIcon = "Illusion";
-	for (const i of svgSkillTrees.values()) i.classList.add("hidden");
-	svgSkillTrees.get(currentSkillTree).classList.remove("hidden");
-	for (const i of skillIconsButtons.values()) i.classList.remove("icons__skill-icon--selected");
+	state.skills.currentSkillTree = currentSkillIcon = "Illusion";
+	for (const i of Object.values(svgSkillTrees)) i.classList.add("hidden");
+	svgSkillTrees[state.skills.currentSkillTree].classList.remove("hidden");
+	for (const i of Object.values(skillIconsButtons)) i.classList.remove("icons__skill-icon--selected");
 	dom.overlay.classList.remove("hidden");
 	dom.skills.classList.remove("hidden");
-	skillIconsButtons.get(currentSkillIcon).classList.add("icons__skill-icon--selected");
-	showTreeInfo(currentSkillTree);
+	skillIconsButtons[currentSkillIcon].classList.add("icons__skill-icon--selected");
+	showTreeInfo(state.skills.currentSkillTree);
 	showActivePerks();
 	menuToDefaultView();
 	toggleMenu();
@@ -1438,13 +1438,13 @@ dom.skillIconsWrapper.addEventListener("click", e => {
 	const skillIcon = e.target.closest(".icons__skill-icon");
 	if (!skillIcon) return;
 	const clickedSkillTree = skillIcon.dataset.skillIcon;
-	if (clickedSkillTree === currentSkillTree) return;
-	svgSkillTrees.get(currentSkillTree).classList.add("hidden");
-	svgSkillTrees.get(clickedSkillTree).classList.remove("hidden");
-	skillIconsButtons.get(currentSkillIcon).classList.remove("icons__skill-icon--selected");
-	skillIconsButtons.get(clickedSkillTree).classList.add("icons__skill-icon--selected");
-	currentSkillTree = currentSkillIcon = clickedSkillTree;
-	showTreeInfo(currentSkillTree);
+	if (clickedSkillTree === state.skills.currentSkillTree) return;
+	svgSkillTrees[state.skills.currentSkillTree].classList.add("hidden");
+	svgSkillTrees[clickedSkillTree].classList.remove("hidden");
+	skillIconsButtons[currentSkillIcon].classList.remove("icons__skill-icon--selected");
+	skillIconsButtons[clickedSkillTree].classList.add("icons__skill-icon--selected");
+	state.skills.currentSkillTree = currentSkillIcon = clickedSkillTree;
+	showTreeInfo(state.skills.currentSkillTree);
 	showActivePerks();
 });
 if (isDesktop) {
@@ -1455,7 +1455,7 @@ if (isDesktop) {
 		if (clickedPerk.classList.contains(perkClass) && !ranked) return;
 		if (ranked && (perk.rankNow === perk.maxRank)) return;
 		highlightSkillName();
-		if (sumOfChosenPerks === 0) toggleTitle(".info-win__character-skills-section");
+		if (state.skills.sumOfChosenPerks === 0) toggleTitle(".info-win__character-skills-section");
 		selectPerks(perkName);
 		bundleFuncs(perk);
 	});
@@ -1465,11 +1465,11 @@ if (isDesktop) {
 		if (!targetClass.contains("skill-perks__perk")) return;
 		if (targetClass.contains("skill-perks__perk") && !targetClass.contains(perkClass)) return;
 		const perkName = e.target.dataset.perkName;
-		const perk = perksOverall[currentSkillTree][perkName];
+		const perk = perksOverall[state.skills.currentSkillTree][perkName];
 		deselectPerks(perkName);
 		highlightSkillName();
 		bundleFuncs(perk);
-		if (sumOfChosenPerks === 0) toggleTitle(".info-win__character-skills-section");
+		if (state.skills.sumOfChosenPerks === 0) toggleTitle(".info-win__character-skills-section");
 	});
 	dom.skillTreeWrapper.addEventListener("mouseenter", e => {showPerkDes(e);}, true);
 	dom.skillTreeWrapper.addEventListener("mouseleave", e => {
@@ -1509,7 +1509,7 @@ function checkPerk(e) {
 	const clickedPerk = e.target;
 	if (!clickedPerk.classList.contains("skill-perks__perk")) return false;
 	const perkName = e.target.dataset.perkName;
-	const perk = perksOverall[currentSkillTree][perkName];
+	const perk = perksOverall[state.skills.currentSkillTree][perkName];
 	const ranked = perk.isRanked;
 	return {clickedPerk, perk, perkName, ranked: perk.isRanked};
 }
@@ -1533,14 +1533,14 @@ function cyclePerks(e) {
 	const {clickedPerk, perkName, perk, ranked} = data;
 	if (clickedPerk.classList.contains(perkClass) && !ranked) {
 		deselectPerks(perkName);
-		if (sumOfChosenPerks === 0) toggleTitle(".info-win__character-skills-section");
+		if (state.skills.sumOfChosenPerks === 0) toggleTitle(".info-win__character-skills-section");
 		highlightSkillName();
 	} else if (ranked && (perk.rankNow === perk.maxRank)) {
 		for (let i = 0; i < perk.maxRank; i++) deselectPerks(perkName);
-		if (sumOfChosenPerks === 0) toggleTitle(".info-win__character-skills-section");
+		if (state.skills.sumOfChosenPerks === 0) toggleTitle(".info-win__character-skills-section");
 		highlightSkillName();
 	} else {
-		if (sumOfChosenPerks === 0) toggleTitle(".info-win__character-skills-section");
+		if (state.skills.sumOfChosenPerks === 0) toggleTitle(".info-win__character-skills-section");
 		highlightSkillName();
 		selectPerks(perkName);
 	}
@@ -1556,37 +1556,37 @@ function bundleFuncs(x) {
 }
 function selectPerks(clickedPerk) {
 	const initPerk = clickedPerk;
-	const perk = perksOverall[currentSkillTree][clickedPerk];
+	const perk = perksOverall[state.skills.currentSkillTree][clickedPerk];
 	if (perk.isRanked && perk.rankNow !== 0) {
-		numberOfChosenPerks[currentSkillTree]++;
+		numberOfChosenPerks[state.skills.currentSkillTree]++;
 		updatePerkRank(clickedPerk, true);
 		updateTextPerk(clickedPerk, perk);
 		setMagicResistances(clickedPerk, 1);
 		displayUnarmedDamage();
 		setRankedPerks(clickedPerk, 1);
 	} else {
-		drawLineToParentPerk(clickedPerk, currentSkillTree);
+		drawLineToParentPerk(clickedPerk, state.skills.currentSkillTree);
 		setMagicResistances(clickedPerk, 1);
 		displayUnarmedDamage();
-		if (!skills.get(currentSkillTree)) addPerkSection();
-		const perks = selectedPerks.get(currentSkillTree);
-		const ul = skills.get(currentSkillTree).querySelector("ul");
+		if (!skills[state.skills.currentSkillTree]) addPerkSection();
+		const perks = selectedPerks[state.skills.currentSkillTree];
+		const ul = skills[state.skills.currentSkillTree].querySelector("ul");
 		const frag = document.createDocumentFragment();
 		while (true) {
 			setBonusForSameType(clickedPerk, 1);
-			checkMatchingSetPerk(clickedPerk, true, currentSkillTree);
-			numberOfChosenPerks[currentSkillTree]++;
-			const newPerk = perksOverall[currentSkillTree][clickedPerk];
+			checkMatchingSetPerk(clickedPerk, true, state.skills.currentSkillTree);
+			numberOfChosenPerks[state.skills.currentSkillTree]++;
+			const newPerk = perksOverall[state.skills.currentSkillTree][clickedPerk];
 			if (newPerk.isRanked) updatePerkRank(clickedPerk, true);
 			setRankedPerks(clickedPerk, 1);
 			const li = returnLi(clickedPerk, newPerk);
 			frag.appendChild(li);
 			addLiPerks(clickedPerk, li);
-			const [childPerkA, childPerkB] = childrenPerks.get(currentSkillTree).get(clickedPerk) ?? [];
-			const [firstSelected, secondSelected] = [perks.has(childPerkA), perks.has(childPerkB)];
+			const [childPerkA, childPerkB] = childrenPerks[state.skills.currentSkillTree][clickedPerk] ?? [];
+			const [firstSelected, secondSelected] = [perks.includes(childPerkA), perks.includes(childPerkB)];
 			drawLinesToChildrenPerks(clickedPerk, childPerkA, childPerkB, firstSelected, secondSelected);
-			perkNodes.get(currentSkillTree).get(clickedPerk).classList.add(perkClass);
-			perks.add(clickedPerk);
+			perkNodes[state.skills.currentSkillTree][clickedPerk].classList.add(perkClass);
+			if (!perks.includes(clickedPerk)) perks.push(clickedPerk);
 			if (firstSelected || secondSelected || !childPerkA) {
 				break;
 			} else {
@@ -1599,9 +1599,9 @@ function selectPerks(clickedPerk) {
 	updateTextSkill();
 }
 function deselectPerks(clickedPerk, skillTree) {
-	const tree = skillTree ?? currentSkillTree;
-	const skill = selectedPerks.get(tree);
-	const chP = childrenPerks.get(tree);
+	const tree = skillTree ?? state.skills.currentSkillTree;
+	const skill = selectedPerks[tree];
+	const chP = childrenPerks[tree];
 	const perk = perksOverall[tree][clickedPerk];
 	const ranked = perk.isRanked;
 	numberOfChosenPerks[tree]--;
@@ -1614,7 +1614,7 @@ function deselectPerks(clickedPerk, skillTree) {
 	}
 	if (perk.rankNow === 0 || perk.rankNow === undefined) {
 		deselectPerkNode(clickedPerk);
-		const anyChP = chP.get(clickedPerk);
+		const anyChP = chP[clickedPerk];
 		if (anyChP) {
 			for (const i of anyChP) {
 				const lineName = clickedPerk + " " + i;
@@ -1624,13 +1624,13 @@ function deselectPerks(clickedPerk, skillTree) {
 		deselectPP(clickedPerk);
 	}
 	function deselectPP(clickedPerk) {
-		const anyPP = parentPerks.get(tree).get(clickedPerk);
+		const anyPP = parentPerks[tree][clickedPerk];
 		if (anyPP) {
 			for (const i of anyPP) {
-				if (skill.has(i)) {
+				if (skill.includes(i)) {
 					const lineName = i + " " + clickedPerk;
 					deselectLineNode(lineName);
-					if (chP.get(i).some(e => skill.has(e))) continue;
+					if (chP[i].some(e => skill.includes(e))) continue;
 					const perk = perksOverall[tree][i];
 					const ranked = perk.isRanked;
 					if (ranked) {
@@ -1653,12 +1653,14 @@ function deselectPerks(clickedPerk, skillTree) {
 		}
 	}
 	function deselectLineNode(lineName) {
-		lineNodes.get(lineName).classList.remove(lineClass);
-		selectedLines.delete(lineName);
+		lineNodes[lineName].classList.remove(lineClass);
+		const index = selectedLines.indexOf(lineName);
+		if (index > -1) selectedLines.splice(index, 1);
 	}
 	function deselectPerkNode(clickedPerk) {
-		perkNodes.get(tree).get(clickedPerk).classList.remove(perkClass);
-		skill.delete(clickedPerk);
+		perkNodes[tree][clickedPerk].classList.remove(perkClass);
+		const index = skill.indexOf(clickedPerk);
+		if (index > -1) skill.splice(index, 1);
 		updateSkillLevelOnDeselect(tree);
 		deleteLiPerks(clickedPerk, tree);
 	}
@@ -1666,13 +1668,13 @@ function deselectPerks(clickedPerk, skillTree) {
 	deletePerkSection(tree);
 }
 function drawLineToParentPerk(clickedPerk, skillTree) {
-	const pp = parentPerks.get(skillTree).get(clickedPerk);
+	const pp = parentPerks[skillTree][clickedPerk];
 	if (!pp) return;
 	for (const i of pp) {
-		if (selectedPerks.get(skillTree).has(i)) {
+		if (selectedPerks[skillTree].includes(i)) {
 			const lineName = i + " " + clickedPerk;
-			lineNodes.get(lineName).classList.add(lineClass);
-			selectedLines.add(lineName);
+			lineNodes[lineName].classList.add(lineClass);
+			if (!selectedLines.includes(lineName)) selectedLines.push(lineName);
 			break;
 		}
 	}
@@ -1681,53 +1683,53 @@ function drawLinesToChildrenPerks(clickedPerk, perkA, perkB, perkASelected, perk
 	if (!perkA && !perkB) return;
 	const [lineAName, lineBName] = [clickedPerk + " " + perkA, clickedPerk + " " + perkB];
 	if (perkASelected && perkBSelected) {
-		lineNodes.get(lineAName).classList.add(lineClass);
-		lineNodes.get(lineBName).classList.add(lineClass);
-		selectedLines.add(lineAName);
-		selectedLines.add(lineBName);
+		lineNodes[lineAName].classList.add(lineClass);
+		lineNodes[lineBName].classList.add(lineClass);
+		if (!selectedLines.includes(lineAName)) selectedLines.push(lineAName);
+		if (!selectedLines.includes(lineBName)) selectedLines.push(lineBName);
 	} else if (perkBSelected) {
-		lineNodes.get(lineBName).classList.add(lineClass);
-		selectedLines.add(lineBName);
+		lineNodes[lineBName].classList.add(lineClass);
+		if (!selectedLines.includes(lineBName)) selectedLines.push(lineBName);
 	} else {
-		lineNodes.get(lineAName).classList.add(lineClass);
-		selectedLines.add(lineAName);
+		lineNodes[lineAName].classList.add(lineClass);
+		if (!selectedLines.includes(lineAName)) selectedLines.push(lineAName);
 	}
 }
 function updatePerkRank(clickedPerk, bool, x) {
-	const tree = x ?? currentSkillTree;
+	const tree = x ?? state.skills.currentSkillTree;
 	const perk = perksOverall[tree][clickedPerk], {rankNow, maxRank} = perk;
 	if (!bool && rankNow === 0 || bool && rankNow === maxRank) return;
 	const newRank = bool ? perk.rankNow += 1 : perk.rankNow -= 1;
 	updateCurrentPerkRankText(clickedPerk, newRank);
 }
 function showActivePerks(x) {
-	const tree = x ?? currentSkillTree;
+	const tree = x ?? state.skills.currentSkillTree;
 	dom.treeActivePerks.textContent = numberOfChosenPerks[tree];
 }
 function highlightSkillName(x) {
-	const tree = x ?? currentSkillTree;
-	if (numberOfChosenPerks[tree] === 0) iconNames.get(tree).classList.toggle("icon-name--selected");
+	const tree = x ?? state.skills.currentSkillTree;
+	if (numberOfChosenPerks[tree] === 0) iconNames[tree].classList.toggle("icon-name--selected");
 }
 function updateCurrentPerkRankText(clickedPerk, rank) {
-	currentPerkRank.get(clickedPerk).textContent = rank;
+	currentPerkRank[clickedPerk].textContent = rank;
 }
 function updateSkillLevelOnSelect(perkName) {
-	const perk = perksOverall[currentSkillTree][perkName];
+	const perk = perksOverall[state.skills.currentSkillTree][perkName];
 	const skill = perk.isRanked ? perk.rankSkill[perk.rankNow] : perk.skill;
-	const charSkill = charSkills[currentSkillTree];
+	const charSkill = charSkills[state.skills.currentSkillTree];
 	if (skill > charSkill.ownSkill) {
 		charSkill.ownSkill = skill;
 		dom.treeSkillLevel.textContent = charSkill.total = charSkill.ownSkill + charSkill.otherSource;
-		calcCharLevel(currentSkillTree, true);
-		calcArmorSkillMod(currentSkillTree);
-		calcWeaponSkillMod(currentSkillTree);
+		calcCharLevel(state.skills.currentSkillTree, true);
+		calcArmorSkillMod(state.skills.currentSkillTree);
+		calcWeaponSkillMod(state.skills.currentSkillTree);
 		calcTotalValue();
 	}
 }
 function updateSkillLevelOnDeselect(x) {
-	const tree = x ?? currentSkillTree;
-	const perks = selectedPerks.get(tree);
-	const baseSkill = raceSkills[chosenRace][tree];
+	const tree = x ?? state.skills.currentSkillTree;
+	const perks = selectedPerks[tree];
+	const baseSkill = raceSkills[state.character.race][tree];
 	const arr = [...perks];
 	const skills = arr.map(e => {
 		const perk = perksOverall[tree][e];
@@ -1759,8 +1761,8 @@ function updateSkillLevelOnDeselect(x) {
 }
 function showPerksOnButton(x) {
 	if (window.matchMedia("(max-width: 769px)").matches) return;
-	const tree = x ?? currentSkillTree;
-	skillIconsPerksNumber.get(tree).textContent = numberOfChosenPerks[currentSkillTree];
+	const tree = x ?? state.skills.currentSkillTree;
+	skillIconsPerksNumber[tree].textContent = numberOfChosenPerks[state.skills.currentSkillTree];
 }
 function updateRankDescription(perk) {
 	if (!perk.isRanked) return;
@@ -1777,9 +1779,9 @@ function updateRankDescription(perk) {
 	dom.perkDescription.textContent = rank === 0 ? perk.description : perk.rankDesc[rank];
 }
 function clearTree(key) {
-	const tree = key ?? currentSkillTree;
+	const tree = key ?? state.skills.currentSkillTree;
 	if (numberOfChosenPerks[tree] === 0) return;
-	const perkName = startingPerks.get(tree);
+	const perkName = startingPerks[tree];
 	const perkInfo = perksOverall[tree][perkName];
 	if (perkInfo.isRanked) {
 		const iter = perkInfo.rankNow;
@@ -1793,10 +1795,10 @@ function clearTree(key) {
 	showPerksOnButton(tree);
 	highlightSkillName(tree);
 	calcSumOfPerks();
-	if (sumOfChosenPerks === 0) toggleTitle(".info-win__character-skills-section");
+	if (state.skills.sumOfChosenPerks === 0) toggleTitle(".info-win__character-skills-section");
 }
 function clearAllTrees() {
-	for (const i of startingPerks) clearTree(i[0]);
+	for (const tree of Object.keys(startingPerks)) clearTree(tree);
 }
 function showTreeInfo(tree) {
 	dom.skillTreeName.textContent = tree;
@@ -1804,7 +1806,7 @@ function showTreeInfo(tree) {
 	dom.treeSkillLevel.textContent = charSkills[tree].total;
 }
 function calcSumOfPerks() {
-	sumOfChosenPerks = Object.values(numberOfChosenPerks).reduce((t, e) => t + e);
+	updateState(s => { s.skills.sumOfChosenPerks = Object.values(numberOfChosenPerks).reduce((t, e) => t + e); });
 }
 function setRankedPerks(perk, sign) {
 	if (!perksModifiers[perk]) return;
@@ -1812,4 +1814,4 @@ function setRankedPerks(perk, sign) {
 	sumOfModifiers[skill].perks = perksOverall[skill][perk].rankNow * perksModifiers[perk][skill];
 	calcTotalValue();
 }
-export {currentSkillTree, charSkills, selectedPerks};
+export {charSkills, selectedPerks};

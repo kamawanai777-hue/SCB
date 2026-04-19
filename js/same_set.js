@@ -1,5 +1,5 @@
 import {sumOfModifiers, calcTotalValue} from "./calc_items_values.js";
-const equippedMatchingItems = new Set();
+import {state, updateState} from "./store.js";
 const matchingSlots = {
 	Head: null,
 	Body: null,
@@ -409,18 +409,18 @@ function checkMatchingSetArmor(name, slot, armorType, sign) {
 	if (!(slot in matchingSlots)) return;
 	armorType += " Armor";
 	if (sign === 1) {
-		equippedMatchingItems.add(name);
+		updateState(s => { if (!s.equipment.equippedMatchingItems.includes(name)) s.equipment.equippedMatchingItems.push(name); });
 		matchingSlots[slot] = matchingItems[armorType][name];
 		setMatchingSetBonus(armorType, sign);
 	} else if (sign === -1) {
 		setMatchingSetBonus(armorType, sign);
-		equippedMatchingItems.delete(name);
+		updateState(s => { s.equipment.equippedMatchingItems = s.equipment.equippedMatchingItems.filter(item => item !== name); });
 		matchingSlots[slot] = null;
 	}
 }
 function checkMatchingSetPerk(perkName, bool, skillTree) {
 	if (perkName !== "Matching Set") return;
-	const skill = skillTree ? skillTree : currentSkillTree;
+	const skill = skillTree ? skillTree : state.skills.currentSkillTree;
 	const bonus = matchingSetBonus[skill];
 	if (bool) {
 		bonus.chosen = true;
@@ -431,16 +431,16 @@ function checkMatchingSetPerk(perkName, bool, skillTree) {
 	}
 }
 function setMatchingSetBonus(armorType, sign) {
-	if (equippedMatchingItems.size !== 4) return;
+	if (state.equipment.equippedMatchingItems.length !== 4) return;
 	const bonus = matchingSetBonus[armorType];
 	if (!bonus.chosen) return;
 	if (sign === 1) {
-		const map = new Map();
+		const map = {};
 		let count = 0;
 		for (const i of Object.values(matchingSlots).flat()) {
-			count = (map.get(i) || 0) + 1;
+			count = (map[i] || 0) + 1;
 			if (count === 4) break;
-			map.set(i, count);
+			map[i] = count;
 		}
 		if (count === 4) {
 			sumOfModifiers[armorType].sameSet += sign * .25;
