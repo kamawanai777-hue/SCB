@@ -172,4 +172,84 @@ test.describe('Skyrim Character Builder E2E Tests', () => {
     const buildInfo = page.locator('section.build-information');
     await expect(buildInfo).toHaveScreenshot('build-info-boons.png');
   });
+
+  test('Multiple items, skills, perks, and boons selection flow', async ({ page }) => {
+    await page.click('button.main-buttons__character');
+    await page.fill('#character-name', 'Hero');
+    await page.selectOption('#races', 'Imperial');
+    await page.click('button.save-character');
+
+    await page.click('button.main-buttons__menu');
+
+    await page.locator('.category-button--items', { hasText: 'Weapons' }).evaluate(node => node.click());
+    await page.locator('button[data-open-items]').filter({ hasText: /^Swords$/ }).evaluate(node => node.click());
+    const itemsWindow = page.locator('section.items-window');
+    await expect(itemsWindow).toBeVisible();
+
+    await page.fill('#items-search', 'Iron Sword');
+    await page.locator('.item-card', { hasText: 'Iron Sword' }).first().locator('button.item-card__equip-button').evaluate(node => node.click());
+
+    const chooseHandContainer = page.locator('.choose-hand');
+    await chooseHandContainer.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
+    if (await chooseHandContainer.isVisible()) {
+      await chooseHandContainer.locator('button.choose-hand__button').last().evaluate(node => node.click()); // Right hand
+    }
+
+    await page.locator('button[data-close-modal="#overlay .items-window"]').evaluate(node => node.click());
+
+    // Equip iron shield
+    await page.locator('.category-button--items', { hasText: 'Shields' }).evaluate(node => node.click());
+    await page.locator('button[data-open-items]').filter({ hasText: /^Heavy$/ }).nth(1).evaluate(node => node.click());
+    await expect(itemsWindow).toBeVisible();
+    await page.fill('#items-search', 'Iron Shield');
+    await page.locator('.item-card', { hasText: 'Iron Shield' }).first().locator('button.item-card__equip-button').evaluate(node => node.click());
+
+    await chooseHandContainer.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
+    if (await chooseHandContainer.isVisible()) {
+      await chooseHandContainer.locator('button.choose-hand__button').first().evaluate(node => node.click()); // Left hand
+    }
+    await page.locator('button[data-close-modal="#overlay .items-window"]').evaluate(node => node.click());
+
+    // Skills
+    await page.locator('button.category-button--skills').evaluate(node => node.click());
+    const skillsModal = page.locator('section.skills');
+    await expect(skillsModal).toBeVisible();
+
+    // Heavy Armor Skill
+    await page.locator('button[data-skill-icon="Heavy Armor"]').evaluate(node => node.click());
+    for(let i=0; i<3; i++) {
+        await page.locator('button[data-change-skill="10"]').first().evaluate(node => node.click());
+    }
+    // Juggernaut
+    await page.locator('circle[data-perk-name="Juggernaut"]').dispatchEvent('click');
+
+    // One-Handed Skill
+    await page.locator('button[data-skill-icon="One-Handed"]').evaluate(node => node.click());
+    for(let i=0; i<3; i++) {
+        await page.locator('button[data-change-skill="10"]').first().evaluate(node => node.click());
+    }
+    await page.locator('circle[data-perk-name="Armsman"]').dispatchEvent('click');
+
+    await page.locator('button[data-close-modal=".skills #overlay"]').evaluate(node => node.click());
+
+    // Boons
+    await page.locator('button.category-button--boons').evaluate(node => node.click());
+    const boonsWindow = page.locator('section.boons');
+    await expect(boonsWindow).toBeVisible();
+    await page.locator('input[value="The Lord Stone"]').evaluate(node => node.click()); // +50 Armor
+    await page.locator('button[data-close-modal=".boons #overlay"]').evaluate(node => node.click());
+
+    await page.locator('.menu .close-button').first().evaluate(node => node.click());
+
+    await page.click('button[data-info-tab=".info-win__statistics-section"]');
+    await page.waitForTimeout(500);
+
+    const totalDamage = page.locator('[data-phys-values="totalDamage"]');
+    const damageVal = await totalDamage.textContent();
+    const totalArmor = page.locator('[data-phys-values="totalArmor"]');
+    const armorVal = await totalArmor.textContent();
+
+    expect(parseInt(damageVal)).toBe(10);
+    expect(parseInt(armorVal)).toBe(76);
+  });
 });
