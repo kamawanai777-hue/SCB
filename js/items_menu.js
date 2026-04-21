@@ -55,8 +55,7 @@ for (const i of dom.typeButtons) {
 }
 dom.closeItemsButton.addEventListener("click", hideItems);
 function openItems() {
-	dom.overlay.classList.remove("hidden");
-	dom.itemsWindow.classList.remove("hidden");
+	updateState(s => { s.ui.itemsOpen = true; });
 	dom.cardsList.scrollTop = 0;
 }
 function oneTimeFunction (event) {
@@ -68,7 +67,7 @@ function oneTimeFunction (event) {
 	Items.makeItem(category, type);
 	makeCards();
 	toggleMenu();
-	updateState(s => { s.ui.itemsOpen = !s.ui.itemsOpen; });
+	updateState(s => { s.ui.itemsOpen = true; });
 	event.target.addEventListener("click", openResults);
 }
 function openCategory(button) {
@@ -162,7 +161,7 @@ function openResults() {
 	showThisTypeItems();
 	nameSortButtons();
 	toggleMenu();
-	updateState(s => { s.ui.itemsOpen = !s.ui.itemsOpen; });
+	updateState(s => { s.ui.itemsOpen = true; });
 }
 function toDefaultSortingOrder() {
 	const fragment = document.createDocumentFragment();
@@ -200,7 +199,7 @@ function hideItems() {
 	hideFilterCategories();
 	uncheckAllCheckboxes();
 	clearSearch(true);
-	updateState(s => { s.ui.itemsOpen = !s.ui.itemsOpen; });
+	updateState(s => { s.ui.itemsOpen = false; });
 }
 function showThisTypeItems() {
 	Object.values(cachedItems[properties.category][properties.type]).forEach(e => {

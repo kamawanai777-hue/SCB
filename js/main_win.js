@@ -32,8 +32,6 @@ dom.menuButton.addEventListener("click", () => {
 	replaceOrKeepItem("No");
 });
 function toggleMenu() {
-	dom.menu.classList.toggle("menu--slide-down");
-	dom.menuButton.classList.toggle("is-open");
 	dom.menuOptions.scrollTop = 0;
 	for (const i of dom.typeContainers) {
 		i.classList.add("hidden");

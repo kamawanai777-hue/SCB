@@ -1455,7 +1455,7 @@ if (isDesktop) {
 		if (clickedPerk.classList.contains(perkClass) && !ranked) return;
 		if (ranked && (perk.rankNow === perk.maxRank)) return;
 		highlightSkillName();
-		if (state.skills.sumOfChosenPerks === 0) toggleTitle(".info-win__character-skills-section");
+
 		selectPerks(perkName);
 		bundleFuncs(perk);
 	});
@@ -1469,7 +1469,7 @@ if (isDesktop) {
 		deselectPerks(perkName);
 		highlightSkillName();
 		bundleFuncs(perk);
-		if (state.skills.sumOfChosenPerks === 0) toggleTitle(".info-win__character-skills-section");
+
 	});
 	dom.skillTreeWrapper.addEventListener("mouseenter", e => {showPerkDes(e);}, true);
 	dom.skillTreeWrapper.addEventListener("mouseleave", e => {
@@ -1533,14 +1533,14 @@ function cyclePerks(e) {
 	const {clickedPerk, perkName, perk, ranked} = data;
 	if (clickedPerk.classList.contains(perkClass) && !ranked) {
 		deselectPerks(perkName);
-		if (state.skills.sumOfChosenPerks === 0) toggleTitle(".info-win__character-skills-section");
+
 		highlightSkillName();
 	} else if (ranked && (perk.rankNow === perk.maxRank)) {
 		for (let i = 0; i < perk.maxRank; i++) deselectPerks(perkName);
-		if (state.skills.sumOfChosenPerks === 0) toggleTitle(".info-win__character-skills-section");
+
 		highlightSkillName();
 	} else {
-		if (state.skills.sumOfChosenPerks === 0) toggleTitle(".info-win__character-skills-section");
+
 		highlightSkillName();
 		selectPerks(perkName);
 	}
@@ -1795,7 +1795,7 @@ function clearTree(key) {
 	showPerksOnButton(tree);
 	highlightSkillName(tree);
 	calcSumOfPerks();
-	if (state.skills.sumOfChosenPerks === 0) toggleTitle(".info-win__character-skills-section");
+
 }
 function clearAllTrees() {
 	for (const tree of Object.keys(startingPerks)) clearTree(tree);

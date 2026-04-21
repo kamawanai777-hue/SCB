@@ -24,3 +24,6 @@ import "./same_set.js";
 import "./unarmed_damage.js";
 import "./passive_effects.js";
 import "./canvas.js";
+import { initRenderers } from "./renderers.js";
+
+initRenderers();
