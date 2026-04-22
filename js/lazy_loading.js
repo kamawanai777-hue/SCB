@@ -6,8 +6,8 @@ const observerOptions = {
 	threshold: 0.0,
 };
 const observer = new IntersectionObserver(addImgPath, observerOptions);
-const cacheBigIMG = new Map();
-let bigIMG, bigIMGToken;
+import {state, updateState} from "./store.js";
+const cacheBigIMG = {};
 if (isDesktop) {
 	dom.cardsContainer.addEventListener("mouseover", e => {if (e.target.classList.contains("item-card__image")) showBigIMG(e.target);});
 	dom.cardsContainer.addEventListener("mouseout", e => {if (e.target.classList.contains("item-card__image")) hideBigIMG(e.target);});
@@ -33,9 +33,12 @@ function addImgPath(entries, observer) {
 function showBigIMG(e) {
 	if (!e.getAttribute("src")) return;
 	const srcName = e.getAttribute("src").replace("_S", "_B");
-	bigIMG = srcName;
-	const token = bigIMGToken = Symbol();
-	if (!cacheBigIMG.has(srcName)) {
+	const token = Symbol();
+	updateState(s => {
+		s.ui.bigIMG = srcName;
+		s.ui.bigIMGToken = token;
+	});
+	if (!cacheBigIMG[srcName]) {
 		const img = document.createElement("img");
 		img.alt = "";
 		if (window.matchMedia("(max-width: 460px").matches) {
@@ -47,27 +50,29 @@ function showBigIMG(e) {
 		}
 		img.style.display = "block";
 		dom.biggerIMGContainer.appendChild(img);
-		cacheBigIMG.set(srcName, img);
+		cacheBigIMG[srcName] = img;
 		img.onload = () => {
-			if (token !== bigIMGToken) return;
+			if (token !== state.ui.bigIMGToken) return;
 			dom.biggerIMGContainer.classList.add("visible");
 		}
 		img.src = srcName;
 	} else {
-		cacheBigIMG.get(srcName).style.display = "block";
+		cacheBigIMG[srcName].style.display = "block";
 		dom.biggerIMGContainer.classList.add("visible");
 	}
 }
 function hideBigIMG(e) {
 	if (!e.getAttribute("src")) return;
-	bigIMGToken = null;
+	updateState(s => { s.ui.bigIMGToken = null; });
 	dom.biggerIMGContainer.classList.remove("visible");
 	const srcName = e.getAttribute("src").replace("_S", "_B");
-	const entry = cacheBigIMG.get(srcName);
+	const entry = cacheBigIMG[srcName];
 	if (entry) entry.style.display = "none";
 }
 function hideBigIMGOnTap() {
-	cacheBigIMG.get(bigIMG).style.display = "none";
+	if (state.ui.bigIMG && cacheBigIMG[state.ui.bigIMG]) {
+		cacheBigIMG[state.ui.bigIMG].style.display = "none";
+	}
 	dom.biggerIMGContainer.classList.remove("visible");
 }
 export {observer};

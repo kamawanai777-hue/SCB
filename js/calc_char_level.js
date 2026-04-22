@@ -1,57 +1,41 @@
 import {dom} from "./dom.js";
 import {raceSkills} from "./other.js";
-import {chosenRace} from "./main_win.js";
-import {charSkills, currentSkillTree} from "./skills.js";
+import {state, updateState} from "./store.js";
+import {charSkills} from "./skills.js";
 import {calcArmorSkillMod, calcWeaponSkillMod, calcTotalValue, displayPhysValues} from "./calc_items_values.js";
 import {updateTextSkill} from "./add_skills.js";
 document.querySelector(".skills-header__buttons").addEventListener("click", e => changeSkillLevel(e));
-let charLevel = 1;
-let xpToNextLevel = (charLevel + 3) * 25;
-let totalXP = 0;
-const xpBySkillTree = {
-	Alchemy: 0,
-	Alteration: 0,
-	Archery: 0,
-	Block: 0,
-	Conjuration: 0,
-	Destruction: 0,
-	Enchanting: 0,
-	"Heavy Armor": 0,
-	Illusion: 0,
-	"Light Armor": 0,
-	Lockpicking: 0,
-	"One-Handed": 0,
-	Pickpocket: 0,
-	Restoration: 0,
-	Smithing: 0,
-	Sneak: 0,
-	Speech: 0,
-	"Two-Handed": 0,
-};
 function calcCharLevel(skill, bool) {
-	const a = raceSkills[chosenRace][skill] + 1;
+	const race = state.character.race;
+	if (!race) return;
+	const a = raceSkills[race][skill] + 1;
 	const b = charSkills[skill].ownSkill;
 	const n = b - a + 1;
-	xpBySkillTree[skill] = (a + b) * n * .5;
-	totalXP = Object.values(xpBySkillTree).reduce((total, num) => total + num);
-	if (bool) {
-		while (totalXP > xpToNextLevel) {
-			xpToNextLevel += (++charLevel + 3) * 25;
+
+	updateState(s => {
+		s.character.xpBySkillTree[skill] = (a + b) * n * .5;
+		s.character.totalXP = Object.values(s.character.xpBySkillTree).reduce((total, num) => total + num, 0);
+
+		if (bool) {
+			while (s.character.totalXP > s.character.xpToNextLevel) {
+				s.character.xpToNextLevel += (++s.character.level + 3) * 25;
+			}
+		} else {
+			while (s.character.xpToNextLevel > s.character.totalXP && s.character.level > 1) {
+				s.character.xpToNextLevel -= (s.character.level-- + 3) * 25;
+			}
 		}
-	} else {
-		while (xpToNextLevel > totalXP && charLevel > 1) {
-			xpToNextLevel -= (charLevel-- + 3) * 25;
-		}
-	}
-	dom.currentLevel.textContent = charLevel;
+	});
+
+	dom.currentLevel.textContent = state.character.level;
 	displayPhysValues();
 }
 function changeSkillLevel(e) {
 	const button = e.target;
 	if (button.closest(".skills-header__button")) {
 		const mod = Number(button.dataset.changeSkill);
-		const skill = charSkills[currentSkillTree];
-		const lowestSkill = raceSkills[chosenRace][currentSkillTree];
+		const skill = charSkills[state.skills.currentSkillTree];
+		const lowestSkill = raceSkills[state.character.race][state.skills.currentSkillTree];
 		if (skill.ownSkill + mod >= 100) {
 			skill.ownSkill = 100;
 		} else if (skill.ownSkill + mod <= lowestSkill) {
@@ -59,15 +43,15 @@ function changeSkillLevel(e) {
 		} else {
 			skill.ownSkill += mod;
 		}
-		calcWeaponSkillMod(currentSkillTree);
-		calcArmorSkillMod(currentSkillTree);
+		calcWeaponSkillMod(state.skills.currentSkillTree);
+		calcArmorSkillMod(state.skills.currentSkillTree);
 		calcTotalValue();
 		dom.treeSkillLevel.textContent = skill.total = skill.ownSkill + skill.otherSource;
-		updateTextSkill(currentSkillTree);
+		updateTextSkill(state.skills.currentSkillTree);
 		if (mod < 0) {
-			calcCharLevel(currentSkillTree, false);
+			calcCharLevel(state.skills.currentSkillTree, false);
 		} else {
-			calcCharLevel(currentSkillTree, true);
+			calcCharLevel(state.skills.currentSkillTree, true);
 		}
 	}
 }

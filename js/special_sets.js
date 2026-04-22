@@ -1,6 +1,6 @@
 import {setItemSkillBonus, basicValues, sumOfModifiers} from "./calc_items_values.js";
 import {slotContent} from "./equip_items.js";
-const partsOfSet = new Set();
+import {state, updateState} from "./store.js";
 const armorSets = {
 	Nightingale: ["Nightingale Armor", "Nightingale Boots", "Nightingale Gloves", "Nightingale Hood"],
 	Shrouded: ["Shrouded Armor", "Shrouded Boots", "Shrouded Cowl", "Shrouded Gloves", "Ancient Shrouded Armor", "Ancient Shrouded Boots", "Ancient Shrouded Cowl", "Ancient Shrouded Gloves", "Worn Shrouded Armor", "Worn Shrouded Boots", "Worn Shrouded Cowl", " WornShrouded Gloves", "Tumblerbane Gloves"],
@@ -39,11 +39,11 @@ function checkForSet(name, sign) {
 	if (setName === "Tumblerbane") setName = "Shrouded";
 	let counter = 0;
 	if (sign === 1) {
-		partsOfSet.add(name);
-		for (const i of armorSets[setName]) partsOfSet.has(i) && counter++;
+		updateState(s => { if (!s.equipment.partsOfSet.includes(name)) s.equipment.partsOfSet.push(name); });
+		for (const i of armorSets[setName]) state.equipment.partsOfSet.includes(i) && counter++;
 	} else if (sign === -1) {
-		for (const i of armorSets[setName]) partsOfSet.has(i) && counter++;
-		partsOfSet.delete(name);
+		for (const i of armorSets[setName]) state.equipment.partsOfSet.includes(i) && counter++;
+		updateState(s => { s.equipment.partsOfSet = s.equipment.partsOfSet.filter(item => item !== name); });
 	}
 	if (counter === 4) {
 		if (setName === "Ahzidal") {

@@ -1,4 +1,4 @@
-const mapCanvases = new Map();
+const mapCanvases = {};
 const resistancesKeys = ["magic", "poison", "disease", "fireTotal", "frostTotal", "shockTotal"];
 const resistancesParams = {
 	magic: 85,
@@ -13,7 +13,7 @@ for (const canvas of document.querySelectorAll("canvas")) {
 	canvas.width = 202;
 	const ctx = canvas.getContext("2d");
 	drawRect(ctx);
-	mapCanvases.set(canvas.dataset.canvas, ctx);
+	mapCanvases[canvas.dataset.canvas] = ctx;
 }
 function drawRect(ctx) {
 	ctx.strokeStyle = "white";

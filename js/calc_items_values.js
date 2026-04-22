@@ -183,8 +183,8 @@ const shieldKeys = {
 	"Heavy Armor": "Shields Heavy",
 	"Light Armor": "Shields Light",
 };
-const physicalValues = new Map();
-for (const i of document.querySelectorAll("[data-phys-values]")) physicalValues.set(i.dataset.physValues, i);
+const physicalValues = {};
+for (const i of document.querySelectorAll("[data-phys-values]")) physicalValues[i.dataset.physValues] = i;
 function setPhysStats(slot, item, name, sign) {
 	if (item) {
 		const armor = item.armorRating, damage = item.damage, type = item.type, category = item.category, weight = item.weight;
@@ -315,9 +315,9 @@ function setSeekerMod(name, sign) {
 	}
 }
 function displayPhysValues() {
-	physicalValues.get("totalArmor").textContent = totalValues.totalArmor;
-	physicalValues.get("totalDamage").textContent = totalValues.totalDamage;
-	physicalValues.get("totalWeight").textContent = totalValues.totalWeight;
+	physicalValues["totalArmor"].textContent = totalValues.totalArmor;
+	physicalValues["totalDamage"].textContent = totalValues.totalDamage;
+	physicalValues["totalWeight"].textContent = totalValues.totalWeight;
 	calcAndDisplayPhysProtection();
 }
 function calcAndDisplayPhysProtection() {
@@ -327,7 +327,7 @@ function calcAndDisplayPhysProtection() {
 	}
 	let reduction = Math.round((totalValues.totalArmor * .12 + (3 * pieces)) * 10) / 10;
 	if (reduction >= 80) reduction = 80;
-	physicalValues.get("physProtection").textContent = reduction + " %";
-	fillArmor(mapCanvases.get("totalArmor"), reduction);
+	physicalValues["physProtection"].textContent = reduction + " %";
+	fillArmor(mapCanvases["totalArmor"], reduction);
 }
 export {calcWeaponSkillMod, calcArmorSkillMod, calcTotalValue, setPhysStats, setItemSkillBonus, basicValues, sumOfModifiers, displayPhysValues, setTheLordStone, setAncientKnowledge, setSeekerMod};

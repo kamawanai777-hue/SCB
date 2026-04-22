@@ -1,9 +1,10 @@
 import {dom} from "./dom.js";
 import {cachedItems, properties} from "./items_menu.js";
-let timer;
+import {state, updateState} from "./store.js";
 dom.searchField.addEventListener("input", e => {
-	clearTimeout(timer);
-	timer = setTimeout(() => searchItem(e), 300);
+	clearTimeout(state.timers.findItemTimer);
+	const t = setTimeout(() => searchItem(e), 300);
+	updateState(s => { s.timers.findItemTimer = t; });
 });
 dom.clearSearchButton.addEventListener("click", () => clearSearch());
 function clearSearch(justClear = false) {

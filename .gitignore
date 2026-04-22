@@ -3,7 +3,9 @@
 *.txt
 node_modules
 
-# Playwright artifacts
-test-results/
-playwright-report/
-playwright/.cache/
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
