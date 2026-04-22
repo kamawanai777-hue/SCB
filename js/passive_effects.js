@@ -1,5 +1,5 @@
 import {dom} from "./dom.js";
-import {chosenRace} from "./main_win.js";
+import {state} from "./store.js";
 import {standingStones, blessings} from "./boons.js";
 import {toggleTitle} from "./info_tabs.js";
 const racialBonuses = {
@@ -33,7 +33,7 @@ const racialBonuses = {
 		"Resist Poison": "Your Wood Elf blood gives you 50% resistance to poison.",
 	},
 };
-const mapPassiveEffects = new Map();
+const mapPassiveEffects = {};
 let passEffcounter = 0, racialPassive = false;
 function setBoonDescription(boon, bool) {
 	const boonDesc = standingStones[boon] ?? blessings[boon];
@@ -44,20 +44,22 @@ function setBoonDescription(boon, bool) {
 		term.textContent = boon;
 		desc.textContent = boonDesc;
 		dom.dlPassEff.appendChild(fragment);
-		mapPassiveEffects.set(boon, [term, desc]);
+		mapPassiveEffects[boon] = [term, desc];
 		if (passEffcounter === 0 && !racialPassive) toggleTitle(".info-win__passive-effects-section");
 		++passEffcounter;
 		dom.passEffNothing.classList.add("hidden");
 	} else {
-		for (const i of mapPassiveEffects.get(boon)) i.remove();
-		mapPassiveEffects.delete(boon);
+		if (mapPassiveEffects[boon]) {
+			for (const i of mapPassiveEffects[boon]) i.remove();
+			delete mapPassiveEffects[boon];
+		}
 		--passEffcounter;
 		if (passEffcounter === 0 && !racialPassive) toggleTitle(".info-win__passive-effects-section");
 	}
 }
 function setRaceAbilityDesc() {
-	if (!racialBonuses[chosenRace]) return;
-	for (const [key, value] of Object.entries(racialBonuses[chosenRace])) {
+	if (!racialBonuses[state.character.race]) return;
+	for (const [key, value] of Object.entries(racialBonuses[state.character.race])) {
 		const fragment = dom.passEffTemp.content.cloneNode(true);
 		const term = fragment.querySelector(".passive-effects__term");
 		const desc = fragment.querySelector(".passive-effects__desc");

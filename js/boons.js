@@ -51,13 +51,12 @@ const tripletBlocks = {
 	"Seeker of Shadows": ["Seeker of Might", "Seeker of Sorcery"],
 	"Seeker of Sorcery": ["Seeker of Might", "Seeker of Shadows"]
 };
-const selectedBlessings = new Set();
-const blessingsLabels = new Map();
-const blessingsInputs = new Map();
-const selectedStandingStones = new Set();
-const standingStonesLabels = new Map();
-const standingStonesInputs = new Map();
-let standingStoneSavedInAC = null;
+import { state, updateState } from "./store.js";
+
+const blessingsLabels = {};
+const blessingsInputs = {};
+const standingStonesLabels = {};
+const standingStonesInputs = {};
 if (isDesktop) {
 	dom.boonsOptions.addEventListener("mouseover", e => showBoonDetails(e));
 	dom.boonsOptions.addEventListener("mouseout", e => hideBoonDetails(e));
@@ -70,11 +69,11 @@ dom.boonsButton.addEventListener("click", () => {
 	dom.overlay.classList.remove("hidden");
 	dom.boons.classList.remove("hidden");
 });
-dom.standingStonesLabels.forEach(e => standingStonesLabels.set(e.textContent, e));
-dom.standingStonesInputs.forEach(e => standingStonesInputs.set(e.value, e));
+dom.standingStonesLabels.forEach(e => standingStonesLabels[e.textContent] = e);
+dom.standingStonesInputs.forEach(e => standingStonesInputs[e.value] = e);
 dom.standingStones.addEventListener("change", e => isStoneSelected(e));
-dom.blessingsLabels.forEach(e => blessingsLabels.set(e.textContent, e));
-dom.blessingsInputs.forEach(e => blessingsInputs.set(e.value, e));
+dom.blessingsLabels.forEach(e => blessingsLabels[e.textContent] = e);
+dom.blessingsInputs.forEach(e => blessingsInputs[e.value] = e);
 dom.blessings.addEventListener("change", e => isBlessingSelected(e));
 function showBoonDetails(e) {
 	const boon = e.target;
@@ -100,7 +99,7 @@ function boonDetailsOnTap(e) {
 function isStoneSelected(e) {
 	const el = e.target.closest(".boons__label").querySelector("input");
 	const name = el.value;
-	if (selectedStandingStones.has(name)) {
+	if (state.boons.selectedStandingStones.includes(name)) {
 		deselectStone(el);
 		setMagicResistances(name, -1);
 		setTheLordStone(name, -1);
@@ -117,9 +116,9 @@ function isStoneSelected(e) {
 	}
 }
 function selectStone(el) {
-	if (checkAetherialCrown() && selectedStandingStones.size === 0) {
+	if (checkAetherialCrown() && state.boons.selectedStandingStones.length === 0) {
 		addStandingStone(el);
-	} else if (checkAetherialCrown() && selectedStandingStones.size === 1) {
+	} else if (checkAetherialCrown() && state.boons.selectedStandingStones.length === 1) {
 		addStandingStone(el);
 		saveStandingStoneInAC(el);
 		disableOtherStones();
@@ -129,11 +128,11 @@ function selectStone(el) {
 	}
 }
 function deselectStone(el) {
-	if (checkAetherialCrown() && selectedStandingStones.size === 2) {
-		if (standingStoneSavedInAC === el.value) removeSavedStandingStoneFromAC();
+	if (checkAetherialCrown() && state.boons.selectedStandingStones.length === 2) {
+		if (state.boons.standingStoneSavedInAC === el.value) removeSavedStandingStoneFromAC();
 		removeStandingStone(el);
 		enableOtherStones();
-	} else if (checkAetherialCrown() && selectedStandingStones.size === 1) {
+	} else if (checkAetherialCrown() && state.boons.selectedStandingStones.length === 1) {
 		removeSavedStandingStoneFromAC();
 		removeStandingStone(el);
 	} else {
@@ -145,58 +144,66 @@ function checkAetherialCrown() {
 	return slotContent.Head?.name === "Aetherial Crown";
 }
 function disableOtherStones() {
-	for (const [key, value] of standingStonesInputs) {
-		if (!selectedStandingStones.has(key)) {
+	for (const [key, value] of Object.entries(standingStonesInputs)) {
+		if (!state.boons.selectedStandingStones.includes(key)) {
 			value.disabled = true;
-			standingStonesLabels.get(key).style.pointerEvents = "none";
+			standingStonesLabels[key].style.pointerEvents = "none";
 		}
 	}
 }
 function enableOtherStones() {
 	dom.standingStonesInputs.forEach(e => {
-		standingStonesLabels.get(e.value).style.pointerEvents = "initial";
+		standingStonesLabels[e.value].style.pointerEvents = "initial";
 		e.disabled = false
 	});
 }
 function addStandingStone(el) {
-	selectedStandingStones.add(el.value);
+	updateState(s => {
+		if (!s.boons.selectedStandingStones.includes(el.value)) {
+			s.boons.selectedStandingStones.push(el.value);
+		}
+	});
 }
 function removeStandingStone(el) {
-	selectedStandingStones.delete(el.value);
+	updateState(s => {
+		s.boons.selectedStandingStones = s.boons.selectedStandingStones.filter(item => item !== el.value);
+	});
 }
 function removeSavedStandingStoneFromAC() {
-	standingStoneSavedInAC = null;
+	updateState(s => { s.boons.standingStoneSavedInAC = null; });
 }
 function saveStandingStoneInAC(el) {
-	standingStoneSavedInAC = el.value;
+	updateState(s => { s.boons.standingStoneSavedInAC = el.value; });
 }
 function equipAetherialCrown(name) {
-	if (name === "Aetherial Crown" && selectedStandingStones.size === 1) {
-		if (standingStoneSavedInAC) {
-			setBoonDescription(standingStoneSavedInAC, true);
-			setTheLordStone(standingStoneSavedInAC, 1);
-			setMagicResistances(standingStoneSavedInAC, 1);
+	if (name === "Aetherial Crown" && state.boons.selectedStandingStones.length === 1) {
+		if (state.boons.standingStoneSavedInAC) {
+			const saved = state.boons.standingStoneSavedInAC;
+			setBoonDescription(saved, true);
+			setTheLordStone(saved, 1);
+			setMagicResistances(saved, 1);
 			displayUnarmedDamage();
 			displayPhysValues();
-			selectedStandingStones.add(standingStoneSavedInAC);
-			standingStonesInputs.get(standingStoneSavedInAC).checked = true;
-			standingStonesInputs.get(standingStoneSavedInAC).disabled = false;
+			updateState(s => { s.boons.selectedStandingStones.push(saved); });
+			standingStonesInputs[saved].checked = true;
+			standingStonesInputs[saved].disabled = false;
 		} else {
 			enableOtherStones();
 		}
 	}
 }
 function unequipAetherialCrown(name) {
-	if (name === "Aetherial Crown" && selectedStandingStones.size === 2) {
-		setBoonDescription(standingStoneSavedInAC, false);
-		setTheLordStone(standingStoneSavedInAC, -1);
-		setMagicResistances(standingStoneSavedInAC, -1);
+	if (name === "Aetherial Crown" && state.boons.selectedStandingStones.length === 2) {
+		const saved = state.boons.standingStoneSavedInAC;
+		setBoonDescription(saved, false);
+		setTheLordStone(saved, -1);
+		setMagicResistances(saved, -1);
 		displayUnarmedDamage();
 		displayPhysValues();
-		selectedStandingStones.delete(standingStoneSavedInAC);
-		standingStonesInputs.get(standingStoneSavedInAC).checked = false;
-		standingStonesInputs.get(standingStoneSavedInAC).disabled = true;
-	} else if (name === "Aetherial Crown" && selectedStandingStones.size === 1) {
+		updateState(s => { s.boons.selectedStandingStones = s.boons.selectedStandingStones.filter(item => item !== saved); });
+		standingStonesInputs[saved].checked = false;
+		standingStonesInputs[saved].disabled = true;
+	} else if (name === "Aetherial Crown" && state.boons.selectedStandingStones.length === 1) {
 		disableOtherStones();
 	}
 }
@@ -204,10 +211,10 @@ function isBlessingSelected(e) {
 	const el = e.target.closest(".boons__label").querySelector("input");
 	const name = el.value;
 	if (el.checked) {
-		selectedBlessings.add(name);
+		updateState(s => { if (!s.boons.selectedBlessings.includes(name)) s.boons.selectedBlessings.push(name); });
 		tripletBlocks[name]?.forEach(a => {
-			blessingsLabels.get(a).style.pointerEvents = "none";
-			blessingsInputs.get(a).disabled = true
+			blessingsLabels[a].style.pointerEvents = "none";
+			blessingsInputs[a].disabled = true
 		});
 		setMagicResistances(name, 1);
 		setAncientKnowledge(name, 1);
@@ -216,10 +223,10 @@ function isBlessingSelected(e) {
 		displayUnarmedDamage();
 		displayPhysValues();
 	} else {
-		selectedBlessings.delete(name);
+		updateState(s => { s.boons.selectedBlessings = s.boons.selectedBlessings.filter(item => item !== name); });
 		tripletBlocks[name]?.forEach(a => {
-			blessingsLabels.get(a).style.pointerEvents = "initial";
-			blessingsInputs.get(a).disabled = false
+			blessingsLabels[a].style.pointerEvents = "initial";
+			blessingsInputs[a].disabled = false
 		});
 		setMagicResistances(name, -1);
 		setAncientKnowledge(name, -1);
@@ -229,4 +236,4 @@ function isBlessingSelected(e) {
 		displayPhysValues();
 	}
 }
-export {selectedBlessings, equipAetherialCrown, unequipAetherialCrown, standingStones, blessings};
+export {equipAetherialCrown, unequipAetherialCrown, standingStones, blessings};

@@ -1,15 +1,13 @@
+import {state, updateState} from "./store.js";
 import {dom} from "./dom.js";
 import {raceSkills} from "./other.js";
 import {setMagicResistances} from "./magic_resistances.js";
 import {replaceOrKeepItem} from "./equip_items.js";
-import {charSkills, currentSkillTree} from "./skills.js";
-import {itemsOpen, hideItems} from "./items_menu.js";
+import {charSkills} from "./skills.js";
+import {hideItems} from "./items_menu.js";
 import {calcWeaponSkillMod, calcArmorSkillMod, calcTotalValue} from "./calc_items_values.js";
 import {displayUnarmedDamage} from "./unarmed_damage.js";
 import {setRaceAbilityDesc} from "./passive_effects.js";
-let anyBuild = false;
-let menuOpen = false;
-let chosenRace;
 const matchQuery = window.matchMedia("(max-width: 909px");
 if (matchQuery.matches) dom.H1.textContent = "SCB";
 matchQuery.addEventListener("change", e => {
@@ -26,7 +24,7 @@ dom.characterButton.addEventListener("click", e => {
 	openCreateChar();
 	focusCharName(e);
 	hideWarning();
-	if (menuOpen) toggleMenu();
+	if (state && state.ui && state.ui.menuOpen) toggleMenu();
 });
 dom.menuButton.addEventListener("click", () => {
 	isThereAnyBuild();
@@ -34,21 +32,19 @@ dom.menuButton.addEventListener("click", () => {
 	replaceOrKeepItem("No");
 });
 function toggleMenu() {
-	dom.menu.classList.toggle("menu--slide-down");
-	dom.menuButton.classList.toggle("is-open");
 	dom.menuOptions.scrollTop = 0;
 	for (const i of dom.typeContainers) {
 		i.classList.add("hidden");
 		i.parentElement.style.order = "";
 	}
-	menuOpen = !menuOpen;
+	updateState(s => { s.ui.menuOpen = !s.ui.menuOpen; });
 }
 function isThereAnyBuild() {
 	clearTimeout(createBuildFirst.timerID);
-	if (anyBuild) toggleMenu();
+	if (state.ui.anyBuild) toggleMenu();
 }
 function createBuildFirst() {
-	if (!anyBuild) {
+	if (!state.ui.anyBuild) {
 		dom.warning.classList.remove("hidden");
 		createBuildFirst.timerID = setTimeout(() => dom.warning.classList.add("hidden"), 2000);
 	}
@@ -63,9 +59,11 @@ function openCreateChar() {
 function saveYourBuild(event) {
 	let a = dom.races, b = dom.characterName;
 	if (b.value && a.value) {
-		setMagicResistances(chosenRace, -1);
+		if (state.character.race) {
+			setMagicResistances(state.character.race, -1);
+		}
 		const race = dom.races.value;
-		chosenRace = race;
+		updateState(s => { s.character.race = race; s.character.name = b.value; });
 		for (const [key, value] of Object.entries(raceSkills[race])) {
 			charSkills[key].ownSkill = value;
 			charSkills[key].total = value;
@@ -73,11 +71,11 @@ function saveYourBuild(event) {
 			calcArmorSkillMod(key);
 		}
 		for (const i of document.querySelectorAll(".statistics")) i.classList.remove("hidden");
-		if (!anyBuild) document.querySelector(".info-win__statistics-section .nothing-there-yet").classList.add("hidden");
-		anyBuild = true;
-		dom.currentName.textContent = b.value;
+		if (!state.ui.anyBuild) document.querySelector(".info-win__statistics-section .nothing-there-yet").classList.add("hidden");
+		updateState(s => { s.ui.anyBuild = true; });
+		dom.currentName.textContent = state.character.name;
 		dom.currentRace.textContent = a.value;
-		dom.treeSkillLevel.textContent = charSkills[currentSkillTree].total;
+		dom.treeSkillLevel.textContent = charSkills[state.skills.currentSkillTree].total;
 		dom.skillTreeRace.textContent = race;
 		setMagicResistances(race, 1);
 		displayUnarmedDamage();
@@ -98,14 +96,14 @@ function closeModal(button) {
 	}
 	removeValidation();
 	replaceOrKeepItem("No");
-	if (itemsOpen) hideItems();
+	if (state.ui.itemsOpen) hideItems();
 }
 function closeOnKey() {
 	const overlay = dom.overlay?.dataset.closeModal?.split(" ").map(e => document.querySelector(e)) ?? [];
 	for (const el of overlay) if (el) el.classList.add("hidden");
 	replaceOrKeepItem("No");
 	removeValidation();
-	if (itemsOpen) hideItems();
+	if (state.ui.itemsOpen) hideItems();
 }
 function focusCharName(e) {
 	e.preventDefault();
@@ -132,4 +130,4 @@ function isVisible(el) {
 document.addEventListener("keydown", e => {
 	if (e.key === "Enter" && isVisible(dom.createCharacter)) saveYourBuild(e) && closeOnKey();
 });
-export {chosenRace, toggleMenu};
+export {toggleMenu};

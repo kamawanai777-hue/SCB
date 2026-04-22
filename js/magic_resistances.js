@@ -150,8 +150,8 @@ const currentRes = {
 	poison: 0,
 	disease: 0,
 };
-const magicResistances = new Map();
-for (const i of dom.resistances) magicResistances.set(i.dataset.resistances, i);
+const magicResistances = {};
+for (const i of dom.resistances) magicResistances[i.dataset.resistances] = i;
 function setMagicResistances(name, sign) {
 	const r = resistances[name];
 	if (!r) return;
@@ -175,28 +175,28 @@ function setMagicResistances(name, sign) {
 	}
 	if (r.poison) currentRes.poison += sign * r.poison;
 	if (r.disease) currentRes.disease += sign * r.disease;
-	for (const i of resistancesKeys) fillResistances(mapCanvases.get(i), currentRes[i], resistancesParams[i]);
+	for (const i of resistancesKeys) fillResistances(mapCanvases[i], currentRes[i], resistancesParams[i]);
 	displayResistances();
 }
 function displayResistances() {
 	for (const [key, value] of Object.entries(currentRes)) {
 		if (key.includes("Total")) {
 			if (value >= 97.75) {
-				magicResistances.get(key).textContent = 97.75 + " %";
+				magicResistances[key].textContent = 97.75 + " %";
 			} else {
-				magicResistances.get(key).textContent = value + " %";
+				magicResistances[key].textContent = value + " %";
 			}
 		} else if (key === "disease") {
 			if (value >= 100) {
-				magicResistances.get(key).textContent = 100 + " %";
+				magicResistances[key].textContent = 100 + " %";
 			} else {
-				magicResistances.get(key).textContent = value + " %";
+				magicResistances[key].textContent = value + " %";
 			}
 		} else {
 			if (value >= 85) {
-				magicResistances.get(key).textContent = 85 + " %";
+				magicResistances[key].textContent = 85 + " %";
 			} else {
-				magicResistances.get(key).textContent = value + " %";
+				magicResistances[key].textContent = value + " %";
 			}
 		}
 	}
