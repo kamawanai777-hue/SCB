@@ -102,7 +102,7 @@ async function equipItem(e) {
 		const result = await promise;
 		bundleFunc(result, item, name);
 	} catch (err) {
-		console.log(err);
+		// handle error if needed
 	}
 	resolution.clear();
 }
