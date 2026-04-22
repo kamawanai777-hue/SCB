@@ -635,8 +635,9 @@ function modalToCenter() {
 	const a = dom.unequipMiniatureContainer, b = dom.unequipMiniatureModal, c = document.documentElement;
 	const winHeight = c.clientHeight;
 	const winMidLine = winHeight / 2;
-	const conTop = a.getBoundingClientRect().top;
-	const conBottom = a.getBoundingClientRect().bottom;
+	const rect = a.getBoundingClientRect();
+	const conTop = rect.top;
+	const conBottom = rect.bottom;
 	const conBorder = a.clientTop;
 	const modalHeight = b.offsetHeight;
 	const modalHalf = modalHeight / 2;
