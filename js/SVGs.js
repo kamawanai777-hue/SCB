@@ -1422,8 +1422,6 @@ const smallSVG = `<svg class="skill-tree" data-skill-tree="Illusion" width="340"
 		</g>
 	</g>
 </svg>`;
-if (window.matchMedia("(min-width: 620px)").matches) {
-	document.querySelector(".perk-info").insertAdjacentHTML("beforebegin", bigSVG);
-} else {
-	document.querySelector(".perk-info").insertAdjacentHTML("beforebegin", smallSVG);
-}
+const svgString = window.matchMedia("(min-width: 620px)").matches ? bigSVG : smallSVG;
+const svgDoc = new DOMParser().parseFromString(`<root>${svgString}</root>`, "image/svg+xml");
+document.querySelector(".perk-info").before(...svgDoc.documentElement.childNodes);
